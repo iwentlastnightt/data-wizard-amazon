@@ -108,7 +108,7 @@ export default function DashboardPage() {
       const stats = await dbService.getDatabaseStats();
       setDbStats(stats);
       
-      return response;
+      return response; // This is now compatible with the expected return type
     } catch (error) {
       console.error(`Failed to fetch data from ${endpoint.id}:`, error);
       toast.error(`Failed to fetch data from ${endpoint.name}`);

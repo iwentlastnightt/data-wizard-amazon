@@ -20,6 +20,7 @@ export interface ApiResponse {
   timestamp: number;
   success: boolean;
   error?: string;
+  id?: string; // Add the id field that's used in the database service
 }
 
 export interface DatabaseStats {

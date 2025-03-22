@@ -9,7 +9,7 @@ interface AmazonDB extends DBSchema {
   };
   responses: {
     key: string;
-    value: ApiResponse;
+    value: ApiResponse & { id: string }; // Ensure the stored value has an id
     indexes: { 'by-endpoint': string; 'by-timestamp': number };
   };
 }
@@ -56,9 +56,10 @@ class DatabaseService {
 
   async saveResponse(response: ApiResponse): Promise<string> {
     const db = await this.dbPromise;
+    const responseId = `${response.endpointId}-${response.timestamp}`;
     const id = await db.put('responses', {
       ...response,
-      id: `${response.endpointId}-${response.timestamp}`
+      id: responseId
     });
     return id.toString();
   }
@@ -104,7 +105,8 @@ class DatabaseService {
     const tx = db.transaction('responses', 'readwrite');
     
     for (const response of responses) {
-      await tx.store.delete(response.id);
+      // Now TypeScript knows response has an id property
+      await tx.store.delete(response.id!); // Use non-null assertion since we know it exists
     }
     
     await tx.done;

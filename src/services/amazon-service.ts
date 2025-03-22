@@ -1,7 +1,6 @@
-
 import { AmazonCredentials, ApiEndpoint, ApiResponse, ProgressStatus } from '../types/amazon-api';
 import dbService from './db-service';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 class AmazonService {
   private proxyUrl = 'http://localhost:8080/api/amazon';
@@ -33,7 +32,6 @@ class AmazonService {
 
   public async setCredentials(credentials: AmazonCredentials): Promise<boolean> {
     try {
-      // Validate credentials by attempting to get a token
       const isValid = await this.validateCredentials(credentials);
       
       if (isValid) {
@@ -51,13 +49,8 @@ class AmazonService {
 
   private async validateCredentials(credentials: AmazonCredentials): Promise<boolean> {
     try {
-      // For demonstration purposes, we'll simulate the validation
-      // In a real app, you would call the Amazon API to validate
-      
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Check if credentials have the required fields
       return !!(credentials.clientId && credentials.clientSecret && credentials.refreshToken);
     } catch (error) {
       console.error('Credential validation failed:', error);
@@ -74,17 +67,14 @@ class AmazonService {
       throw new Error('Credentials not set');
     }
 
-    // Check if we already have a valid token
     if (this.accessToken && Date.now() < this.tokenExpiration - 60000) {
       return this.accessToken;
     }
 
-    // In a real implementation, this would make an actual request to Amazon's token endpoint
-    // For the demo, we'll simulate the token response
     await new Promise(resolve => setTimeout(resolve, 800));
     
     this.accessToken = 'simulated-access-token-' + Date.now();
-    this.tokenExpiration = Date.now() + 3600000; // Token valid for 1 hour
+    this.tokenExpiration = Date.now() + 3600000;
     
     return this.accessToken;
   }
@@ -95,14 +85,10 @@ class AmazonService {
         throw new Error('Credentials not set');
       }
 
-      // Get access token
       const accessToken = await this.getAccessToken();
       
-      // In a real implementation, this would make an actual request to the SP-API
-      // For the demo, we'll simulate the response with random data
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Create a simulated response
       const response: ApiResponse = {
         endpointId: endpoint.id,
         data: this.generateMockData(endpoint.id),
@@ -110,14 +96,12 @@ class AmazonService {
         success: true
       };
       
-      // Save the response to the database
       await dbService.saveResponse(response);
       
       return response;
     } catch (error) {
       console.error(`Error fetching from endpoint ${endpoint.id}:`, error);
       
-      // Create an error response
       const errorResponse: ApiResponse = {
         endpointId: endpoint.id,
         data: null,
@@ -126,7 +110,6 @@ class AmazonService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
       
-      // Save the error response to the database
       await dbService.saveResponse(errorResponse);
       
       return errorResponse;
@@ -136,7 +119,6 @@ class AmazonService {
   public async fetchAllEndpoints(): Promise<Record<string, ApiResponse>> {
     const endpoints = await import('../types/amazon-api').then(module => module.API_ENDPOINTS);
     
-    // Update progress status
     this.updateProgress({
       currentEndpoint: '',
       progress: 0,
@@ -150,7 +132,6 @@ class AmazonService {
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i];
       
-      // Update progress
       this.updateProgress({
         currentEndpoint: endpoint.name,
         progress: i,
@@ -183,7 +164,6 @@ class AmazonService {
       }
     }
     
-    // Complete progress
     this.updateProgress({
       currentEndpoint: '',
       progress: endpoints.length,
@@ -196,7 +176,6 @@ class AmazonService {
   }
 
   private generateMockData(endpointId: string): any {
-    // Generate realistic-looking mock data based on the endpoint
     switch (endpointId) {
       case 'listings-items':
         return {
@@ -287,7 +266,6 @@ class AmazonService {
     }
   }
 
-  // Progress tracking methods
   private updateProgress(status: ProgressStatus) {
     this.progressStatus = status;
     this.notifyProgressListeners();
@@ -302,7 +280,6 @@ class AmazonService {
   public onProgressUpdate(callback: (status: ProgressStatus) => void): () => void {
     this.progressListeners.push(callback);
     
-    // Return a function to remove the listener
     return () => {
       this.progressListeners = this.progressListeners.filter(listener => listener !== callback);
     };
@@ -313,6 +290,5 @@ class AmazonService {
   }
 }
 
-// Create a singleton instance
 const amazonService = new AmazonService();
 export default amazonService;
