@@ -10,7 +10,7 @@ import { Clock, Database, RefreshCcw } from 'lucide-react';
 interface EndpointCardProps {
   endpoint: ApiEndpoint;
   response?: ApiResponse;
-  onFetch: (endpoint: ApiEndpoint) => Promise<void>;
+  onFetch: (endpoint: ApiEndpoint) => Promise<ApiResponse>;
   isLoading?: boolean;
 }
 

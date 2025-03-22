@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,6 @@ export default function DashboardPage() {
     storageUsed: 0
   });
   
-  // Check if credentials are set
   useEffect(() => {
     const checkCredentials = async () => {
       const hasCredentials = amazonService.hasCredentials();
@@ -52,7 +50,6 @@ export default function DashboardPage() {
     checkCredentials();
   }, [navigate]);
   
-  // Load data from the database
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -60,12 +57,10 @@ export default function DashboardPage() {
         const latestResponses = await dbService.getLatestResponses();
         setResponses(latestResponses);
         
-        // Set the first endpoint as selected, or use existing selection
         if (Object.keys(latestResponses).length > 0 && !selectedEndpoint) {
           setSelectedEndpoint(Object.keys(latestResponses)[0]);
         }
         
-        // Load database stats
         const stats = await dbService.getDatabaseStats();
         setDbStats(stats);
       } catch (error) {
@@ -79,7 +74,6 @@ export default function DashboardPage() {
     loadData();
   }, [selectedEndpoint]);
   
-  // Set up progress listener
   useEffect(() => {
     const unsubscribe = amazonService.onProgressUpdate((status) => {
       setProgress(status);
@@ -91,24 +85,21 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
   
-  const handleFetchData = async (endpoint: ApiEndpoint) => {
+  const handleFetchData = async (endpoint: ApiEndpoint): Promise<ApiResponse> => {
     try {
       const response = await amazonService.fetchFromEndpoint(endpoint);
       
-      // Update the responses state
       setResponses(prev => ({
         ...prev,
         [endpoint.id]: response
       }));
       
-      // Select this endpoint to show its data
       setSelectedEndpoint(endpoint.id);
       
-      // Refresh database stats
       const stats = await dbService.getDatabaseStats();
       setDbStats(stats);
       
-      return response; // This is now compatible with the expected return type
+      return response;
     } catch (error) {
       console.error(`Failed to fetch data from ${endpoint.id}:`, error);
       toast.error(`Failed to fetch data from ${endpoint.name}`);
@@ -124,7 +115,6 @@ export default function DashboardPage() {
       const results = await amazonService.fetchAllEndpoints();
       setResponses(results);
       
-      // Refresh database stats
       const stats = await dbService.getDatabaseStats();
       setDbStats(stats);
       
@@ -139,7 +129,6 @@ export default function DashboardPage() {
     try {
       const blob = await dbService.exportAllData();
       
-      // Create a download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -147,7 +136,6 @@ export default function DashboardPage() {
       document.body.appendChild(a);
       a.click();
       
-      // Clean up
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
@@ -162,7 +150,6 @@ export default function DashboardPage() {
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-8">
-      {/* Header */}
       <header className="sticky top-0 z-40 w-full bg-white/70 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4 flex h-16 items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -180,9 +167,7 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      {/* Main content */}
       <main className="container mx-auto px-4 pt-6">
-        {/* Progress bar for fetching all data */}
         {progress.status === 'running' && (
           <Card className="mb-6 glass border-opacity-30">
             <CardContent className="pt-6">
@@ -198,7 +183,6 @@ export default function DashboardPage() {
           </Card>
         )}
         
-        {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card className="glass glass-hover">
             <CardHeader className="pb-2">
@@ -244,7 +228,6 @@ export default function DashboardPage() {
           </Card>
         </div>
         
-        {/* Action buttons */}
         <div className="flex flex-wrap gap-4 mb-6">
           <Button
             onClick={handleFetchAllData}
@@ -266,7 +249,6 @@ export default function DashboardPage() {
           </Button>
         </div>
         
-        {/* Main tabs */}
         <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 w-full max-w-md mb-6">
             <TabsTrigger value="dashboard" className="flex items-center">
@@ -279,9 +261,7 @@ export default function DashboardPage() {
             </TabsTrigger>
           </TabsList>
           
-          {/* Dashboard tab */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* API endpoints grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {API_ENDPOINTS.map((endpoint) => (
                 <EndpointCard
@@ -295,7 +275,6 @@ export default function DashboardPage() {
             </div>
           </TabsContent>
           
-          {/* Data view tab */}
           <TabsContent value="data" className="space-y-6">
             {dbStats.totalResponses === 0 ? (
               <Card className="glass">
@@ -312,7 +291,6 @@ export default function DashboardPage() {
               </Card>
             ) : (
               <>
-                {/* Endpoint selector */}
                 <div className="flex flex-wrap gap-2">
                   {Object.keys(responses).map((endpointId) => (
                     <Button
@@ -328,7 +306,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 
-                {/* Data preview */}
                 {selectedEndpoint && responses[selectedEndpoint] && (
                   <DataPreview response={responses[selectedEndpoint]} />
                 )}
