@@ -172,6 +172,13 @@ class AmazonService {
       message: 'All data has been extracted'
     });
     
+    try {
+      await dbService.createHistoricalSnapshot();
+      toast.success('Historical data snapshot created');
+    } catch (error) {
+      console.error('Failed to create historical snapshot:', error);
+    }
+    
     return results;
   }
 
@@ -258,6 +265,181 @@ class AmazonService {
             reportType: ['GET_FLAT_FILE_OPEN_LISTINGS_DATA', 'GET_MERCHANT_LISTINGS_DATA', 'GET_FBA_INVENTORY_AGED_DATA'][Math.floor(Math.random() * 3)],
             createdTime: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
             processingStatus: ['DONE', 'IN_PROGRESS', 'IN_QUEUE'][Math.floor(Math.random() * 3)]
+          }))
+        };
+        
+      case 'fba-inbound-eligibility':
+        return {
+          asinInboundGuidance: Array.from({ length: 8 }, (_, i) => ({
+            asin: `B0${100000 + i}`,
+            inboundGuidance: ['INBOUND_NOT_RECOMMENDED', 'INBOUND_OK'][Math.floor(Math.random() * 2)],
+            guidanceReasonList: ['SLOW_MOVING_ASIN']
+          }))
+        };
+        
+      case 'fba-inventory-age':
+        return {
+          inventoryAgeDetail: Array.from({ length: 10 }, (_, i) => ({
+            sku: `SKU${100000 + i}`,
+            fnSku: `FN${100000 + i}`,
+            asin: `B0${100000 + i}`,
+            totalQuantity: Math.floor(Math.random() * 100),
+            inventoryAgeGroups: [
+              { groupName: '0-90 days', quantity: Math.floor(Math.random() * 50) },
+              { groupName: '91-180 days', quantity: Math.floor(Math.random() * 30) },
+              { groupName: '181-270 days', quantity: Math.floor(Math.random() * 15) },
+              { groupName: '271-365 days', quantity: Math.floor(Math.random() * 5) },
+              { groupName: '>365 days', quantity: Math.floor(Math.random() * 2) }
+            ]
+          }))
+        };
+        
+      case 'product-fees':
+        return {
+          feeDetails: Array.from({ length: 12 }, (_, i) => ({
+            asin: `B0${100000 + i}`,
+            sku: `SKU${100000 + i}`,
+            feeBreakdown: [
+              { feeType: 'FBA fees', amount: { currencyCode: 'USD', amount: (Math.random() * 3 + 1).toFixed(2) } },
+              { feeType: 'Referral Fee', amount: { currencyCode: 'USD', amount: (Math.random() * 5 + 1).toFixed(2) } },
+              { feeType: 'Closing Fee', amount: { currencyCode: 'USD', amount: '0.99' } }
+            ],
+            totalFees: { currencyCode: 'USD', amount: (Math.random() * 10 + 3).toFixed(2) }
+          }))
+        };
+        
+      case 'product-pricing':
+        return {
+          pricingData: Array.from({ length: 15 }, (_, i) => ({
+            asin: `B0${100000 + i}`,
+            sku: `SKU${100000 + i}`,
+            itemPrice: { currencyCode: 'USD', amount: (Math.random() * 100 + 10).toFixed(2) },
+            competitivePriceThreshold: { currencyCode: 'USD', amount: (Math.random() * 90 + 9).toFixed(2) },
+            buyBoxPrice: { currencyCode: 'USD', amount: (Math.random() * 95 + 9.5).toFixed(2) }
+          }))
+        };
+        
+      case 'sales-analytics':
+        return {
+          analytics: Array.from({ length: 30 }, (_, i) => ({
+            date: new Date(Date.now() - (30 - i) * 86400000).toISOString().split('T')[0],
+            salesMetrics: {
+              orderedUnits: Math.floor(Math.random() * 50),
+              orderedProductSales: { currencyCode: 'USD', amount: (Math.random() * 1000 + 100).toFixed(2) },
+              totalOrderItems: Math.floor(Math.random() * 60),
+              averageSellingPrice: { currencyCode: 'USD', amount: (Math.random() * 50 + 15).toFixed(2) }
+            }
+          }))
+        };
+        
+      case 'shipping':
+        return {
+          shipments: Array.from({ length: 8 }, (_, i) => ({
+            shipmentId: `SHIP-${100000 + i}`,
+            amazonOrderId: `ORDER-${100000 + i}`,
+            trackingId: `TRACK-${100000 + i}`,
+            status: ['SHIPPED', 'LABEL_PURCHASED', 'IN_TRANSIT'][Math.floor(Math.random() * 3)],
+            createdDate: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString()
+          }))
+        };
+        
+      case 'seller-account':
+        return {
+          marketplaceParticipations: [
+            {
+              marketplace: {
+                id: 'ATVPDKIKX0DER',
+                name: 'Amazon.com',
+                countryCode: 'US',
+                defaultCurrencyCode: 'USD',
+                defaultLanguageCode: 'en_US'
+              },
+              participation: {
+                isParticipating: true,
+                hasSuspendedListings: false
+              }
+            },
+            {
+              marketplace: {
+                id: 'A2EUQ1WTGCTBG2',
+                name: 'Amazon.ca',
+                countryCode: 'CA',
+                defaultCurrencyCode: 'CAD',
+                defaultLanguageCode: 'en_CA'
+              },
+              participation: {
+                isParticipating: false,
+                hasSuspendedListings: false
+              }
+            }
+          ]
+        };
+        
+      case 'fulfillment-inbound':
+        return {
+          shipments: Array.from({ length: 6 }, (_, i) => ({
+            shipmentId: `FBA-INB-${100000 + i}`,
+            sellerSKU: `SKU${100000 + i}`,
+            fulfillmentNetworkSKU: `FN${100000 + i}`,
+            quantityShipped: Math.floor(Math.random() * 100) + 5,
+            quantityReceived: Math.floor(Math.random() * 80),
+            shipmentStatus: ['WORKING', 'SHIPPED', 'RECEIVING', 'CLOSED'][Math.floor(Math.random() * 4)],
+            shipmentName: `Inbound Shipment ${i + 1}`
+          }))
+        };
+        
+      case 'fulfillment-outbound':
+        return {
+          fulfillmentOrders: Array.from({ length: 7 }, (_, i) => ({
+            sellerFulfillmentOrderId: `FFO-${100000 + i}`,
+            destinationAddress: {
+              name: `Customer ${i + 1}`,
+              addressLine1: `${1000 + i} Main St`,
+              city: 'Seattle',
+              stateOrRegion: 'WA',
+              postalCode: '98101',
+              countryCode: 'US'
+            },
+            fulfillmentAction: 'Ship',
+            displayableOrderId: `ORDER-${100000 + i}`,
+            displayableOrderDate: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
+            statusUpdatedDate: new Date(Date.now() - Math.random() * 10 * 86400000).toISOString()
+          }))
+        };
+        
+      case 'notifications':
+        return {
+          destinations: Array.from({ length: 3 }, (_, i) => ({
+            destinationId: `DEST-${100000 + i}`,
+            resourceVersion: '1.0',
+            name: `Notification Destination ${i + 1}`,
+            destinationType: 'SQS'
+          }))
+        };
+        
+      case 'merchant-fulfillment':
+        return {
+          merchantShipments: Array.from({ length: 5 }, (_, i) => ({
+            shipmentId: `MSH-${100000 + i}`,
+            amazonOrderId: `ORDER-${100000 + i}`,
+            sellerOrderId: `SO-${100000 + i}`,
+            itemList: [
+              {
+                orderItemId: `ITEM-${100000 + i}`,
+                quantity: Math.floor(Math.random() * 3) + 1
+              }
+            ],
+            status: ['PURCHASED', 'CANCELLED', 'ERROR', 'SHIPPED'][Math.floor(Math.random() * 4)]
+          }))
+        };
+        
+      case 'feeds':
+        return {
+          feeds: Array.from({ length: 4 }, (_, i) => ({
+            feedId: `FEED-${100000 + i}`,
+            feedType: ['POST_PRODUCT_DATA', 'POST_INVENTORY_AVAILABILITY_DATA', 'POST_ORDER_FULFILLMENT_DATA'][Math.floor(Math.random() * 3)],
+            processingStatus: ['CANCELLED', 'DONE', 'FATAL', 'IN_PROGRESS', 'IN_QUEUE'][Math.floor(Math.random() * 5)],
+            createdTime: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString()
           }))
         };
         

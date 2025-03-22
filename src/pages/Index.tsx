@@ -1,28 +1,62 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, ChevronRight, Server, ShieldCheck } from 'lucide-react';
+import { Database, ChevronRight, Server, ShieldCheck, History } from 'lucide-react';
 import amazonService from '@/services/amazon-service';
+import dbService from '@/services/db-service';
+import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isCheckingCredentials, setIsCheckingCredentials] = useState(true);
   
   useEffect(() => {
     // Check if credentials are already set
     const checkCredentials = async () => {
-      const hasCredentials = amazonService.hasCredentials();
-      if (hasCredentials) {
-        // Automatically redirect to dashboard if credentials are set
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
+      setIsCheckingCredentials(true);
+      try {
+        const hasCredentials = amazonService.hasCredentials();
+        
+        if (hasCredentials) {
+          // Record login timestamp and create a historical snapshot
+          await handleLogin();
+          
+          // Automatically redirect to dashboard if credentials are set
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Error during login process:', error);
+        toast.error('There was a problem logging in');
+      } finally {
+        setIsCheckingCredentials(false);
       }
     };
     
     checkCredentials();
   }, [navigate]);
+  
+  const handleLogin = async () => {
+    try {
+      // Update the last login timestamp
+      await dbService.updateLastLogin();
+      
+      // Fetch all endpoints to ensure we have the latest data
+      toast.info('Refreshing data from all endpoints...');
+      await amazonService.fetchAllEndpoints();
+      
+      // Create a historical snapshot
+      await dbService.createHistoricalSnapshot();
+      toast.success('Historical data snapshot created successfully');
+    } catch (error) {
+      console.error('Error creating historical snapshot:', error);
+      toast.error('Failed to create historical data snapshot');
+      throw error;
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
@@ -76,17 +110,17 @@ const Index = () => {
         <Card className="glass glass-hover border-opacity-30 animate-slide-up stagger-3">
           <CardHeader>
             <CardTitle className="flex items-center justify-center mb-4">
-              <Database className="h-8 w-8 text-primary" />
+              <History className="h-8 w-8 text-primary" />
             </CardTitle>
-            <CardTitle className="text-xl">Complete Data</CardTitle>
+            <CardTitle className="text-xl">Historical Data</CardTitle>
             <CardDescription>
-              Access all SP-API endpoints
+              Track changes over time
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 dark:text-gray-300 text-sm">
-              Extract data from all important Amazon SP-API endpoints including orders,
-              inventory, listings, finances, and more in one simple interface.
+              Automatically creates snapshots of your Amazon data every time you log in,
+              giving you a historical record to track changes over time.
             </p>
           </CardContent>
         </Card>
@@ -97,6 +131,7 @@ const Index = () => {
           size="lg"
           onClick={() => navigate('/setup')}
           className="text-base flex items-center"
+          disabled={isCheckingCredentials}
         >
           Get Started
           <ChevronRight className="h-4 w-4 ml-2" />
@@ -107,6 +142,7 @@ const Index = () => {
           size="lg"
           onClick={() => navigate('/dashboard')}
           className="text-base"
+          disabled={isCheckingCredentials}
         >
           Go to Dashboard
         </Button>

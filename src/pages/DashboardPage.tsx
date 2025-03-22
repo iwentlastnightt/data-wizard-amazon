@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { toast } from 'sonner';
 import { AnimatedNumber } from '@/components/ui-components/AnimatedNumber';
 import { EndpointCard } from '@/components/ui-components/EndpointCard';
 import { DataPreview } from '@/components/ui-components/DataPreview';
-import { AlertTriangle, ChevronRight, Database, Download, LayoutDashboard, RefreshCcw, Settings, Play, Clock } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Database, Download, LayoutDashboard, RefreshCcw, Settings, Play, Clock, History } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -30,7 +31,8 @@ export default function DashboardPage() {
     totalEndpoints: 0,
     totalResponses: 0,
     lastUpdated: null,
-    storageUsed: 0
+    storageUsed: 0,
+    historicalSnapshots: 0
   });
   
   useEffect(() => {
@@ -157,6 +159,10 @@ export default function DashboardPage() {
             <h1 className="text-xl font-semibold">Amazon SP-API Data Extractor</h1>
           </div>
           <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/historical')}>
+              <History className="h-4 w-4 mr-2" />
+              Historical Data
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate('/setup')}>
               <Settings className="h-5 w-5" />
             </Button>
@@ -183,7 +189,7 @@ export default function DashboardPage() {
           </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card className="glass glass-hover">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Endpoints</CardTitle>
@@ -214,15 +220,28 @@ export default function DashboardPage() {
               <CardDescription>Time since last data fetch</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold flex items-center">
+              <div className="text-xl font-bold flex items-center">
                 {dbStats.lastUpdated ? (
                   <>
-                    <Clock className="mr-2 h-6 w-6 text-gray-400" />
+                    <Clock className="mr-2 h-5 w-5 text-gray-400" />
                     {new Date(dbStats.lastUpdated).toLocaleString()}
                   </>
                 ) : (
                   <span>Never</span>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="glass glass-hover" onClick={() => navigate('/historical')} style={{ cursor: 'pointer' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Historical Snapshots</CardTitle>
+              <CardDescription>Archived data snapshots</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold flex items-center">
+                <History className="mr-2 h-6 w-6 text-primary" />
+                <AnimatedNumber value={dbStats.historicalSnapshots} />
               </div>
             </CardContent>
           </Card>
@@ -246,6 +265,15 @@ export default function DashboardPage() {
           >
             <Download className="h-4 w-4 mr-2" />
             Export Data
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => navigate('/historical')}
+            className="flex items-center space-x-2"
+          >
+            <History className="h-4 w-4 mr-2" />
+            View Historical Data
           </Button>
         </div>
         

@@ -1,6 +1,6 @@
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { AmazonCredentials, ApiResponse, DatabaseStats } from '../types/amazon-api';
+import { AmazonCredentials, ApiResponse, DatabaseStats, HistoricalSnapshot } from '../types/amazon-api';
 
 interface AmazonDB extends DBSchema {
   credentials: {
@@ -12,12 +12,21 @@ interface AmazonDB extends DBSchema {
     value: ApiResponse & { id: string }; // Ensure the stored value has an id
     indexes: { 'by-endpoint': string; 'by-timestamp': number };
   };
+  historical: {
+    key: string;
+    value: HistoricalSnapshot;
+    indexes: { 'by-date': number };
+  };
+  lastLogin: {
+    key: 'last-login';
+    value: number;
+  };
 }
 
 class DatabaseService {
   private dbPromise: Promise<IDBPDatabase<AmazonDB>>;
   private DB_NAME = 'amazon-sp-api';
-  private DB_VERSION = 1;
+  private DB_VERSION = 2; // Increment DB version to trigger upgrade
 
   constructor() {
     this.dbPromise = this.initDatabase();
@@ -25,7 +34,7 @@ class DatabaseService {
 
   private async initDatabase(): Promise<IDBPDatabase<AmazonDB>> {
     return openDB<AmazonDB>(this.DB_NAME, this.DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion, newVersion) {
         // Create a store for the Amazon SP-API credentials
         if (!db.objectStoreNames.contains('credentials')) {
           db.createObjectStore('credentials');
@@ -39,6 +48,20 @@ class DatabaseService {
           });
           responseStore.createIndex('by-endpoint', 'endpointId');
           responseStore.createIndex('by-timestamp', 'timestamp');
+        }
+
+        // Create a store for historical data snapshots
+        if (!db.objectStoreNames.contains('historical')) {
+          const historicalStore = db.createObjectStore('historical', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          historicalStore.createIndex('by-date', 'date');
+        }
+
+        // Create a store for tracking last login
+        if (!db.objectStoreNames.contains('lastLogin')) {
+          db.createObjectStore('lastLogin');
         }
       },
     });
@@ -117,9 +140,58 @@ class DatabaseService {
     await db.clear('responses');
   }
 
+  // Historical data methods
+  async createHistoricalSnapshot(): Promise<string> {
+    const db = await this.dbPromise;
+    const latestResponses = await this.getLatestResponses();
+    const responseIds = Object.values(latestResponses).map(response => response.id!);
+    
+    const snapshot: HistoricalSnapshot = {
+      id: `snapshot-${Date.now()}`,
+      date: Date.now(),
+      responseIds
+    };
+    
+    const id = await db.put('historical', snapshot);
+    return id.toString();
+  }
+
+  async getHistoricalSnapshots(): Promise<HistoricalSnapshot[]> {
+    const db = await this.dbPromise;
+    return db.getAllFromIndex('historical', 'by-date').then(snapshots => 
+      snapshots.sort((a, b) => b.date - a.date)
+    );
+  }
+
+  async getSnapshotResponses(snapshot: HistoricalSnapshot): Promise<Record<string, ApiResponse>> {
+    const db = await this.dbPromise;
+    const responses: Record<string, ApiResponse> = {};
+    
+    for (const responseId of snapshot.responseIds) {
+      const response = await db.get('responses', responseId);
+      if (response) {
+        responses[response.endpointId] = response;
+      }
+    }
+    
+    return responses;
+  }
+
+  // Last login tracking
+  async updateLastLogin(): Promise<void> {
+    const db = await this.dbPromise;
+    await db.put('lastLogin', Date.now(), 'last-login');
+  }
+
+  async getLastLogin(): Promise<number | undefined> {
+    const db = await this.dbPromise;
+    return db.get('lastLogin', 'last-login');
+  }
+
   async getDatabaseStats(): Promise<DatabaseStats> {
     const db = await this.dbPromise;
     const responses = await db.getAll('responses');
+    const snapshots = await db.getAll('historical');
     
     // Calculate the unique endpoints
     const endpoints = new Set(responses.map(r => r.endpointId));
@@ -139,7 +211,8 @@ class DatabaseService {
       totalEndpoints: endpoints.size,
       totalResponses: responses.length,
       lastUpdated: latestTimestamp,
-      storageUsed
+      storageUsed,
+      historicalSnapshots: snapshots.length
     };
   }
 
@@ -147,6 +220,8 @@ class DatabaseService {
     const db = await this.dbPromise;
     const credentials = await db.get('credentials', 'amazon-credentials');
     const responses = await db.getAll('responses');
+    const snapshots = await db.getAll('historical');
+    const lastLogin = await db.get('lastLogin', 'last-login');
     
     const exportData = {
       credentials: credentials ? {
@@ -155,7 +230,9 @@ class DatabaseService {
         clientSecret: '********',
         refreshToken: '********'
       } : null,
-      responses
+      responses,
+      snapshots,
+      lastLogin
     };
     
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
